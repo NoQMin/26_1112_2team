@@ -2,9 +2,10 @@ from datetime import date
 import streamlit as st
 from services.inventory import get_items
 from services.rental import create_rental
+from services.ui import load_or_stop
 st.title("대여 신청")
 st.caption("제출 시점에 선택한 기간의 재고를 다시 확인합니다.")
-names = {r["item_id"]: r["name"] for r in get_items()}
+names = {r["item_id"]: r["name"] for r in load_or_stop(get_items)}
 if not names:
     st.info("등록된 물품이 없습니다.")
     st.stop()
@@ -20,5 +21,5 @@ if submitted:
     try:
         rental_id = create_rental(item, borrower, department, int(quantity), start, end)
         st.success(f"대여 신청 완료 · 대여번호: {rental_id}")
-    except ValueError as exc:
+    except (ValueError, OSError) as exc:
         st.error(str(exc))

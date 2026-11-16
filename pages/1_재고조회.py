@@ -9,5 +9,5 @@ try:
     validate_period(start, end)
     rows = [{"물품": r["name"], "분류": r["category"], "전체 수량": int(r["total"]), "대여 가능 수량": available_quantity(r["item_id"], start, end)} for r in get_items()]
     st.dataframe(rows, hide_index=True, alt="선택 기간 물품별 재고")
-except ValueError as exc:
+except (ValueError, OSError) as exc:
     st.error(str(exc))

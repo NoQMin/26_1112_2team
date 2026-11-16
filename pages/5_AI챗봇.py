@@ -11,11 +11,22 @@ except ModuleNotFoundError:
     st.code("python -m pip install -r requirements.txt", language="bash")
     st.stop()
 
-selected_day = st.date_input("조회 기준일", min_value=date.today(), key="chat_date")
-st.caption("질문에 날짜가 있으면 그 날짜를 우선합니다. 여러 날 대여는 재고 조회 메뉴에서 전체 기간을 확인해 주세요.")
-st.info('예: "내일 노트북 3개 대여 가능해?" / "오늘 빔프로젝터 몇 개 남았어?"')
 if "rental_chat_messages" not in st.session_state:
     st.session_state.rental_chat_messages = []
+
+
+def reset_chat_for_date():
+    st.session_state.rental_chat_messages = []
+    st.session_state.chat_date_notice = True
+
+
+selected_day = st.date_input(
+    "조회 기준일", min_value=date.today(), key="chat_date", on_change=reset_chat_for_date
+)
+if st.session_state.pop("chat_date_notice", False):
+    st.info(f"조회 기준일을 {selected_day:%Y-%m-%d}로 변경하여 이전 대화를 초기화했습니다.")
+st.caption("질문에 날짜가 있으면 그 날짜를 우선합니다. 여러 날 대여는 재고 조회 메뉴에서 전체 기간을 확인해 주세요.")
+st.info('예: "내일 노트북 3개 대여 가능해?" / "오늘 빔프로젝터 몇 개 남았어?"')
 if st.button("대화 초기화", key="clear_chat"):
     st.session_state.rental_chat_messages = []
     st.rerun()
