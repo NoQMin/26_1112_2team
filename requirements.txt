@@ -1,0 +1,5 @@
+streamlit>=1.43,<2
+pandas>=2.2,<3
+ollama>=0.4,<1
+python-dotenv>=1,<2
+httpx>=0.27,<1
