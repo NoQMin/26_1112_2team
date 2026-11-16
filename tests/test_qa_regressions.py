@@ -39,6 +39,8 @@ class QaRegressionTests(TestCase):
             find_date('2027-11-20부터 2027-11-22까지 Test')
         with self.assertRaises(ChatError):
             find_date('11월 20일과 11월 22일 Test')
+        with self.assertRaises(ChatError):
+            find_date('2027-11-20부터 11월 22일까지 Test')
 
     @patch('services.chatbot.Client')
     def test_dev02_unknown_item_stops_before_model_call(self, client):

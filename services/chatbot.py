@@ -55,6 +55,12 @@ def find_date(text):
             raise ChatError("날짜가 올바르지 않습니다.") from exc
         if len(days) > 1:
             raise ChatError("챗봇은 하루의 재고를 조회합니다. 날짜를 하나만 입력하거나 재고 조회 메뉴에서 기간을 선택해 주세요.")
+        # 연도가 있는 날짜와 연도 없는 다른 날짜를 섞은 질문도 기간으로 오인하지 않는다.
+        remaining_text = text
+        for match in reversed(full_dates):
+            remaining_text = remaining_text[:match.start()] + " " * (match.end() - match.start()) + remaining_text[match.end():]
+        if re.search(r"(?<!\d)(\d{1,2})월\s*(\d{1,2})일", remaining_text):
+            raise ChatError("챗봇은 하루의 재고를 조회합니다. 날짜를 하나만 입력하거나 재고 조회 메뉴에서 기간을 선택해 주세요.")
         return days.pop()
 
     # 11월 20일
