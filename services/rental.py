@@ -19,7 +19,7 @@ def create_rental(item_id, borrower, department, quantity, start, end):
         available = available_quantity(item_id, start, end, rows)
         if quantity > available:
             raise ValueError(f"선택 기간 대여 가능 수량: {available}개")
-        row = dict(rental_id=uuid4().hex[:12], item_id=item_id, borrower=borrower.strip(), department=department.strip(), quantity=quantity, start_date=start.isoformat(), end_date=end.isoformat(), returned=0, created_at=datetime.now().isoformat(timespec="seconds"))
+        row = dict(rental_id=uuid4().hex[:12], item_id=item_id, borrower=borrower.strip(), department=department.strip(), quantity=quantity, start_date=start.isoformat(), end_date=end.isoformat(), returned=0, created_at=datetime.now().isoformat(timespec="seconds"), return_events="[]")
         rows.append(row)
         write_rows("rentals.csv", RENTAL_FIELDS, rows)
     return row["rental_id"]

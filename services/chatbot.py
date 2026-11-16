@@ -41,47 +41,49 @@ class ChatError(Exception):
 def find_date(text):
     today = date.today()
 
-    if "모레" in text:
-        return today + timedelta(days=2)
-
-    if "내일" in text:
-        return today + timedelta(days=1)
-
-    if any(word in text for word in ("오늘", "현재", "지금")):
-        return today
-
     # 2026-11-20 / 2026.11.20 / 2026년 11월 20일
-    full_date = re.search(
+    full_dates = list(re.finditer(
         r"(?<!\d)(20\d{2})\s*[-./년]\s*"
         r"(\d{1,2})\s*[-./월]\s*(\d{1,2})일?",
         text,
-    )
+    ))
 
-    if full_date:
+    if full_dates:
         try:
-            return date(*map(int, full_date.groups()))
-        except ValueError:
-            raise ChatError("날짜가 올바르지 않습니다.")
+            days = {date(*map(int, match.groups())) for match in full_dates}
+        except ValueError as exc:
+            raise ChatError("날짜가 올바르지 않습니다.") from exc
+        if len(days) > 1:
+            raise ChatError("챗봇은 하루의 재고를 조회합니다. 날짜를 하나만 입력하거나 재고 조회 메뉴에서 기간을 선택해 주세요.")
+        return days.pop()
 
     # 11월 20일
-    month_day = re.search(
+    month_days = list(re.finditer(
         r"(?<!\d)(\d{1,2})월\s*(\d{1,2})일",
         text,
-    )
+    ))
 
-    if month_day:
-        month, day = map(int, month_day.groups())
-
+    if month_days:
+        days = set()
         try:
-            candidate = date(today.year, month, day)
+            for match in month_days:
+                month, day = map(int, match.groups())
+                candidate = date(today.year, month, day)
+                if candidate < today - timedelta(days=7):
+                    candidate = date(today.year + 1, month, day)
+                days.add(candidate)
+        except ValueError as exc:
+            raise ChatError("날짜가 올바르지 않습니다.") from exc
+        if len(days) > 1:
+            raise ChatError("조회할 날짜를 하나만 입력해 주세요. 기간 조회는 재고 조회 메뉴에서 할 수 있습니다.")
+        return days.pop()
 
-            if candidate < today - timedelta(days=7):
-                candidate = date(today.year + 1, month, day)
-
-            return candidate
-
-        except ValueError:
-            raise ChatError("날짜가 올바르지 않습니다.")
+    if "모레" in text:
+        return today + timedelta(days=2)
+    if "내일" in text:
+        return today + timedelta(days=1)
+    if any(word in text for word in ("오늘", "현재", "지금")):
+        return today
 
     return None
 
@@ -94,15 +96,31 @@ def get_inventory_facts(question, selected_date):
 
     item_list = get_items()
 
+    normalized = re.sub(r"\s+", "", question).casefold()
     matched = [
         item
         for item in item_list
-        if item["name"] in question
-        or item["item_id"].lower() in question.lower()
+        if re.sub(r"\s+", "", item["name"]).casefold() in normalized
+        or re.search(r"(?<![a-z0-9])" + re.escape(item["item_id"].casefold()) + r"(?![a-z0-9])", question.casefold())
     ]
 
     if not matched:
-        matched = item_list
+        # 정확한 물품을 못 찾았을 때 다른 물품의 수량으로 대답하지 않는다.
+        all_inventory = re.fullmatch(
+            r"(?:(?:오늘|내일|모레|현재|지금)\s*)?"
+            r"(?:전체\s*(?:물품|재고)?|모든\s*물품|등록된\s*물품|물품\s*목록|재고)"
+            r"(?:\s*(?:재고|목록|수량))?"
+            r"(?:\s*(?:알려\s*줘|알려\s*주세요|보여\s*줘|보여\s*주세요|조회|확인))?[?.!\s]*",
+            question.strip(),
+        )
+        if all_inventory or not item_list:
+            matched = item_list
+        else:
+            names = ", ".join(item["name"] for item in item_list[:20])
+            raise ChatError(
+                "조회할 물품을 확인하지 못했습니다. 등록된 물품명 또는 ID를 입력해 주세요. "
+                f"등록 물품: {names}. 전체를 보려면 '전체 재고'라고 질문해 주세요."
+            )
 
     matched_ids = {
         item["item_id"]

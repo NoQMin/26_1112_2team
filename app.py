@@ -13,9 +13,10 @@ def home():
     st.info("재고 조회부터 대여 신청, 부분 반납, 현황 확인까지 관리할 수 있습니다.")
     from services.history import get_history
     from services.inventory import get_items
-    rows = get_history()
+    from services.ui import load_or_stop
+    rows = load_or_stop(get_history)
     with st.container(horizontal=True):
-        st.metric("물품 종류", len(get_items()))
+        st.metric("물품 종류", len(load_or_stop(get_items)))
         st.metric("미반납 수량", sum(r["미반납 수량"] for r in rows))
         st.metric("연체 건수", sum(r["상태"] == "연체" for r in rows))
     st.caption("초기 물품은 시연용 예시입니다. 실제 운영 전 data/items.csv를 수정해 주세요.")
