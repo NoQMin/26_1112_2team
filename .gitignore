@@ -1,0 +1,32 @@
+# Python 가상환경 및 캐시
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# 환경 변수와 Streamlit 인증 정보
+.env
+.env.*
+.streamlit/secrets.toml
+
+# 로컬 개발 파일
+.vscode/
+.idea/
+*.log
+.DS_Store
+Thumbs.db
+
+# Local rental records
+data/rentals.csv
+data/.write.lock
+data/*.tmp
+
+# Publish app source only
+!.env.example
+development_notes/
+output/
+tmp/

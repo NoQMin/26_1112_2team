@@ -1,1 +1,79 @@
-# 26_1112_2team
+# 바로대여 물품 대여 관리 시스템
+
+Python + Streamlit 기반 대학교 물품 대여 관리 프로젝트입니다.
+팀 GitHub `feature/rental-ai-pr`의 Ollama 챗봇을 현재 재고 계산 서비스에 연결했습니다.
+
+## 실행
+
+기존 가상환경을 사용합니다. Python 버전을 바꾸거나 가상환경을 재생성할 필요가 없습니다.
+
+```powershell
+.\.venv\Scripts\python.exe -m streamlit run app.py
+```
+
+다른 환경에서는 `python -m pip install -r requirements.txt`로 설치하세요.
+
+## 구현 기능
+
+- 재고 조회: 시작일과 종료일을 포함한 기간 전체에서 대여 가능한 최소 수량 표시
+- 대여 신청: 이름, 소속, 물품, 수량, 기간 검증과 제출 시 재고 재확인
+- 반납 등록: 시작된 대여에 대한 부분 반납, 누적 반납 및 초과 반납 방지
+- 대여 현황: 신청자·소속·물품·대여번호 검색, 상태 필터와 CSV 다운로드
+- 홈: 물품 종류, 미반납 수량, 연체 건수 표시
+
+## 데이터와 계산 규칙
+
+`data/items.csv`는 시연용 물품 5종입니다. 실제 운영 전 수량과 물품을 수정하세요.
+컬럼은 `item_id,name,category,total`이며 ID는 고유해야 하고 total은 0 이상의 정수여야 합니다.
+물품 추가·수정은 앱을 종료한 후 CSV에서 수행합니다.
+
+신청하면 `data/rentals.csv`가 자동 생성됩니다.
+컬럼은 `rental_id,item_id,borrower,department,quantity,start_date,end_date,returned,created_at`입니다.
+날짜는 YYYY-MM-DD 형식이고 returned는 누적 반납 수량입니다.
+대여 기록과 잠금 파일은 개인정보 보호를 위해 Git에서 제외됩니다.
+
+같은 날 반납 예정인 수량은 그날까지 예약으로 차감합니다.
+겹치는 기간의 최대 동시 사용량을 계산하므로, 서로 겹치지 않는 예약을 단순 합산하지 않습니다.
+부분 반납한 수량은 즉시 재고에 복구합니다. 미반납 연체 물품은 실제 반납 전까지 이후 기간에서도 차감합니다.
+과거 시점의 재고 복원이나 반납 시각별 이력은 제공하지 않으며 재고 조회는 오늘 이후만 지원합니다.
+
+쓰기는 Windows 파일 잠금 안에서 재검증하고 임시 파일을 원자적으로 교체합니다.
+로컬 Windows 팀 프로젝트용이며, 로그인·사용자별 권한·예약 취소·물품 관리 화면은 포함하지 않습니다.
+공개 운영 전에는 인증과 권한 관리가 필요합니다.
+
+## 구조
+
+- `app.py`: 홈 및 공통 내비게이션
+- `pages/1_재고조회.py` ~ `pages/4_대여현황.py`: 업무 화면
+- `services/`: 재고 계산, 신청, 반납, 현황 및 CSV 저장
+- `pages/5_AI챗봇.py`, `services/chatbot.py`: Ollama 재고 상담
+- `support/service_rules.md`: 챗봇 서비스 안내 규칙
+- `tests/test_rental.py`: 겹침·재고 부족·부분 반납·연체 검증
+
+## 테스트
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
+```
+
+테스트는 임시 디렉터리만 사용하여 실제 대여 기록을 변경하지 않습니다.
+Git commit과 push는 직접 수행해 주세요.
+
+## AI 챗봇 설정
+
+팀원 구현 출처: https://github.com/NoQMin/26_1112_2team/tree/feature/rental-ai-pr
+기준 커밋: `5b6acf740be6674bef9e60da007596c4ee788878`.
+원본 llm.py를 services/chatbot.py로 옮기고 현재 CSV 서비스에 연결했습니다.
+
+1. `python -m pip install -r requirements.txt`로 연동 패키지를 설치합니다.
+2. Ollama를 설치·실행합니다. 서버가 꺼져 있으면 `ollama serve`를 실행합니다.
+3. `ollama pull qwen3.5:2b-q4_K_M`으로 모델을 설치합니다.
+4. 설정을 바꾸려면 `.env.example`을 `.env`로 복사하고 모델과 서버 주소를 지정합니다.
+5. 앱의 AI 챗봇 메뉴에서 조회일을 선택하고 질문합니다.
+
+기본 모델은 `qwen3.5:2b-q4_K_M`, 서버 주소는 `http://localhost:11434`입니다.
+이미 설정된 환경 변수가 있으면 .env보다 우선합니다.
+질문의 날짜가 화면 조회일보다 우선하며 과거 날짜는 지원하지 않습니다.
+챗봇은 읽기 전용이며 신청·반납을 실행하지 않습니다. 답변 아래에 시스템 재고 계산 결과를 표시합니다.
+모델에 전달하는 업무 데이터는 물품 재고와 서비스 규칙이며 신청자 개인정보는 포함하지 않습니다.
+Ollama 연결 실패 시 안내 메시지가 표시되며 다른 업무 기능은 계속 사용할 수 있습니다.
